@@ -12,6 +12,11 @@ import {
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { useAuth } from "@/components/auth-provider";
 import { auth, db, isFirebaseConfigured } from "@/lib/firebase";
+import {
+  getRegistrationDisplayName,
+  normalizeDisplayName,
+  normalizeEmail,
+} from "@/lib/profile-values";
 
 export default function Home() {
   const { user, loading } = useAuth();
@@ -42,7 +47,7 @@ export default function Home() {
     setBusy(true);
     setMessage("");
     try {
-      const name = displayName.trim();
+      const name = normalizeDisplayName(displayName);
       await updateProfile(user, { displayName: name });
       await setDoc(doc(db, "users", user.uid), {
         uid: user.uid,
@@ -65,13 +70,14 @@ export default function Home() {
     setBusy(true);
     setMessage("");
     try {
-      const credential = await createUserWithEmailAndPassword(auth, email.trim(), password);
-      const name = displayName.trim() || "團購會員";
+      const normalizedEmail = normalizeEmail(email);
+      const credential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
+      const name = getRegistrationDisplayName(displayName);
       await updateProfile(credential.user, { displayName: name });
       await setDoc(doc(db, "users", credential.user.uid), {
         uid: credential.user.uid,
         displayName: name,
-        email: email.trim(),
+        email: normalizedEmail,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
@@ -87,7 +93,7 @@ export default function Home() {
     setBusy(true);
     setMessage("");
     try {
-      await signInWithEmailAndPassword(auth, email.trim(), password);
+      await signInWithEmailAndPassword(auth, normalizeEmail(email), password);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "登入失敗。");
     } finally {
